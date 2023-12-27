@@ -68,13 +68,10 @@ function App() {
   }, [isSuccess, isError, searchData, error]);
 
   return (
-    <div className='app-container'>
-      {
-        isSuccess && <SearchUI receiverOfItemArray={receiverOfItemArray} />
-      }
-      
+    <div className="app-container">
+      {isSuccess && <SearchUI receiverOfItemArray={receiverOfItemArray} />}
     </div>
-  )
+  );
 }
 
 export default App
