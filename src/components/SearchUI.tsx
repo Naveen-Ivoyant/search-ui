@@ -312,7 +312,7 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
     zipcode: string;
   }) => {
     // Combine form values into a single string
-    const combinedValue = `${values["address Line 1"]} ${values["address Line 2"]} ${values.city} ${values.state} ${values.zipcode}`;
+    const combinedValue = `${values["address Line 1"]}, ${values["address Line 2"]}, ${values.city}, ${values.state}, ${values.zipcode}`;
     setFilterTwo((state) => {
       state.query = combinedValue;
       return { ...state };
