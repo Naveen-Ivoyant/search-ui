@@ -1,14 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Table, Input, Select, Space, Divider, Button, Form } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { ShipmentDataItem, ResultObject } from "../App";
 import MonacoEditor from "@monaco-editor/react";
 import "./SearchUI.css";
 import { CloseOutlined } from "@ant-design/icons";
-import axios from "axios";
 import { SearchPayload, makeSearchQuery } from "../adapter/searchUI";
-
-// const { Search } = Input;
 
 interface DataType {
   key: string | number;
@@ -38,9 +35,12 @@ type DataIndex =
 interface ResultViewProps {}
 
 export const SearchUI: React.FC<ResultViewProps> = () => {
+  const [form] = Form.useForm();
   const [originalData, setOriginalData] = useState<DataType[]>([]);
   const [filteredData, setFilteredData] = useState<DataType[]>([]);
   const [table, setTable] = useState<"table" | "json">("table");
+  const [loading, setLoading] = useState(false);
+  // const [submittedAddressValue, setSubmitteAddressdValue] = useState("");
   // const [searchOne, setSearchOne] = useState<string[]>([]);
   // const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -177,6 +177,7 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
     if (filterOne.query === null || filterTwo.query === null) {
       return;
     }
+    setLoading(true);
 
     // NameAndPhone payload type
     if (filterOne.columnType === "name" && filterTwo.columnType === "phone") {
@@ -198,7 +199,60 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
       };
     }
 
+    // NameAndAddress payload type
+    if (filterOne.columnType === "name" && filterTwo.columnType === "address") {
+      console.log("Payload shoul be of type NameAndPhone");
+      payload = {
+        type: "NameAndAddress",
+        name: filterOne.query,
+        addressLn1: filterTwo.query,
+      };
+    }
+
     payload && runSearchQuery(payload);
+
+    // Filter the data in frontend later it can be removed
+    let newData: DataType[] = [...originalData];
+
+    // Use filter one
+    if (filterOne.query) {
+      newData = newData.filter((item: DataType) => {
+        const columnValue = item[filterOne.columnType as DataIndex];
+
+        return (
+          columnValue &&
+          columnValue.toLowerCase().includes(filterOne.query!.toLowerCase())
+        );
+      });
+    }
+
+    // Use filter two
+    if (filterTwo.query) {
+      newData = newData.filter((item: DataType) => {
+        const columnValue = item[filterTwo.columnType as DataIndex];
+        return (
+          columnValue &&
+          columnValue.toLowerCase().includes(filterTwo.query!.toLowerCase())
+        );
+      });
+    }
+    console.log(newData);
+    setFilteredData(newData);
+    setTimeout(() => setLoading(false), 2000);
+  };
+
+  const onFinish = (values: {
+    [x: string]: string;
+    city: string;
+    state: string;
+    zipcode: string;
+  }) => {
+    // Combine form values into a single string
+    const combinedValue = `${values["address Line 1"]} ${values["address Line 2"]} ${values.city} ${values.state} ${values.zipcode}`;
+    setFilterTwo((state) => {
+      state.query = combinedValue;
+      return { ...state };
+    });
   };
 
   const runSearchQuery = async (payload: SearchPayload) => {
@@ -226,7 +280,7 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
           });
         });
         setOriginalData(fData);
-        setFilteredData(fData);
+        // setFilteredData(fData);
       }
     } catch (error) {
       console.log(error);
@@ -240,6 +294,7 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
     case "table":
       result = (
         <Table
+          loading={loading}
           size="small"
           columns={columns}
           dataSource={filteredData}
@@ -251,9 +306,10 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
     case "json":
       result = (
         <MonacoEditor
+          height="55vh"
           language="json"
           theme="vs-dark"
-          value={JSON.stringify(filteredData[0], null, 2)}
+          value={JSON.stringify(filteredData[0], null, 3)}
           options={{
             selectOnLineNumbers: true,
             lineHeight: 22,
@@ -271,8 +327,6 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
     wrapperCol: { span: 16 },
   };
 
-  const [form] = Form.useForm();
-
   const isButtonEnabled = useMemo(() => {
     return (
       filterOne.query !== null &&
@@ -284,24 +338,6 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
 
   const isSelectedAddress = filterTwo.columnType === "address";
   console.log("selected", isSelectedAddress);
-
-  useEffect(() => {
-    const baseURL = "http://localhost:3007/searchData";
-    const getUsers = async () => {
-      const params = {
-        name: "",
-        phone: "",
-      };
-      try {
-        const response = await axios.get(baseURL, { params });
-        const users = response.data;
-        console.log("===============>", users);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-    getUsers();
-  }, []);
   return (
     <div>
       <div className="inputs-container">
@@ -354,6 +390,7 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
               <Input
                 disabled={false}
                 defaultValue=""
+                value={filterTwo.query || ""}
                 style={{ width: "38rem", height: "40px" }}
                 onChange={(e) => {
                   setFilterTwo((state) => {
@@ -373,7 +410,7 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
                     {...layout}
                     form={form}
                     name="control-hooks"
-                    // onFinish={onFinish}
+                    onFinish={onFinish}
                     style={{ maxWidth: 640, gap: "8px" }}
                   >
                     <Form.Item
@@ -425,6 +462,7 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
                           height: "32px",
                         }}
                         type="primary"
+                        htmlType="submit"
                       >
                         Submit
                       </Button>
@@ -471,25 +509,28 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
           </div>
           <div className="btns-container">
             <div className="toggle-container">
-              <div
+              <Button
                 className={table === "table" ? `active` : ``}
                 onClick={() => setTable("table")}
               >
                 Table View
-              </div>
-              <div
-                className={table === "json" ? `active` : ``}
+              </Button>
+              <Button
+                disabled={filteredData.length === 0}
+                className={
+                  table === "json" && filteredData.length > 0 ? `active` : ``
+                }
                 onClick={() => setTable("json")}
               >
                 JSON View
-              </div>
+              </Button>
             </div>
-            <div
+            <Button
               className="clear-btn"
               onClick={() => setFilteredData(originalData)}
             >
               Clear All
-            </div>
+            </Button>
           </div>
         </div>
         {result}
@@ -497,5 +538,3 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
     </div>
   );
 };
-
-
