@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Table, Input, Select, Space, Divider, Button, Form } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { ShipmentDataItem, ResultObject } from "../App";
-import MonacoEditor from "react-monaco-editor";
+import MonacoEditor from "@monaco-editor/react";
 import "./SearchUI.css";
 import { CloseOutlined } from "@ant-design/icons";
 import axios from "axios";
+import { SearchPayload, makeSearchQuery } from "../adapter/searchUI";
 
 // const { Search } = Input;
 
@@ -34,21 +35,14 @@ type DataIndex =
   | "state"
   | "zip";
 
-interface ResultViewProps {
-  receiverOfItemArray: ResultObject[];
-}
+interface ResultViewProps {}
 
-export const SearchUI: React.FC<ResultViewProps> = ({
-  receiverOfItemArray,
-}) => {
+export const SearchUI: React.FC<ResultViewProps> = () => {
   const [originalData, setOriginalData] = useState<DataType[]>([]);
   const [filteredData, setFilteredData] = useState<DataType[]>([]);
   const [table, setTable] = useState<"table" | "json">("table");
   // const [searchOne, setSearchOne] = useState<string[]>([]);
   // const [searchQuery, setSearchQuery] = useState<string>("");
-
-  const [name, setName] = useState('');
-  const [phone, setPhoneumber = useState('');
 
   const [filterOne, setFilterOne] = useState<{
     columnType: DataIndex | undefined;
@@ -173,109 +167,50 @@ export const SearchUI: React.FC<ResultViewProps> = ({
       label: "Address",
     },
     {
-      value: "accountNo",
-      label: "Account No",
+      value: "accountNbr",
+      label: "Account Nbr",
     },
   ];
 
   const onSearchClicked = () => {
-    let newData: DataType[] = [...originalData];
-
-    // Use filter one
-    if (filterOne.query) {
-      newData = newData.filter((item: DataType) => {
-        const columnValue = item[filterOne.columnType as DataIndex];
-
-        return (
-          columnValue &&
-          columnValue.toLowerCase().includes(filterOne.query!.toLowerCase())
-        );
-      });
+    let payload: SearchPayload | null = null;
+    if (filterOne.query === null || filterTwo.query === null) {
+      return;
     }
 
-    // Use filter two
-    if (filterTwo.query) {
-      newData = newData.filter((item: DataType) => {
-        const columnValue = item[filterTwo.columnType as DataIndex];
-        return (
-          columnValue &&
-          columnValue.toLowerCase().includes(filterTwo.query!.toLowerCase())
-        );
-      });
-    }
-
-    setFilteredData(newData);
-    const baseURL = "http://localhost:3007/searchData";
-    const getUsers = async () => {
-      const params = {
-        name: "",
-        phone: "",
+    // NameAndPhone payload type
+    if (filterOne.columnType === "name" && filterTwo.columnType === "phone") {
+      console.log("Payload shoul be of type NameAndPhone");
+      payload = {
+        type: "NameAndPhone",
+        name: filterOne.query,
+        phone: filterTwo.query,
       };
-      try {
-        const response = await axios.get(baseURL, { params });
-        const users = response.data;
-        console.log("===============>", users);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-    getUsers();
+    }
+
+    // NameAndEmail payload type
+    if (filterOne.columnType === "name" && filterTwo.columnType === "email") {
+      console.log("Payload shoul be of type NameAndPhone");
+      payload = {
+        type: "NameAndEmail",
+        name: filterOne.query,
+        email: filterTwo.query,
+      };
+    }
+
+    payload && runSearchQuery(payload);
   };
 
-  // const namesArray = originalData.map((data, i) => {
-  //   return {
-  //     key: data.name + i,
-  //     value: data.name,
-  //     label: data.name
-  //   }
-  // })
+  const runSearchQuery = async (payload: SearchPayload) => {
+    const response = await makeSearchQuery(payload);
+    if (response) {
+      setReceiverOfItemArray(response);
+    }
+  };
 
-  // const shipperUserIdArrays = originalData.map((data, i) => {
-  //   return {
-  //     key: data.trackingId + i,
-  //     value: data.trackingId,
-  //     label: data.trackingId
-  //   }
-  // })
-
-  // const addressArray = originalData.map((data, i) => {
-  //   return {
-  //     key: data.addressLn1 + i,
-  //     value: data.addressLn1,
-  //     label: data.addressLn1
-  //   }
-  // })
-
-  // let firstOptions = firstSearchOptions;
-
-  // searchOne.map(option => {
-  //   switch (option) {
-  //   case 'name':
-  //     firstOptions = namesArray;
-  //     break;
-  //   case 'shipperUserId':
-  //     firstOptions = shipperUserIdArrays;
-  //     break;
-  //   case 'addressLn1':
-  //     firstOptions = addressArray;
-  //     break;
-  //   default:
-  //     firstOptions = firstSearchOptions;
-  //     break;
-  // }
-  // })
-
-  // const onChangeOne = (value: string[]) => {
-  //   setSearchOne(value);
-
-  //   if (searchOne) {
-  //     let searchedResultsOne = [];
-  //     searchedResultsOne = originalData.filter((item) => {
-  //       return searchOne.some((value) => Object.values(item).includes(value));
-  //     });
-  //     setFilteredData(searchedResultsOne);
-  //   }
-  // };
+  const [receiverOfItemArray, setReceiverOfItemArray] = useState<
+    ResultObject[]
+  >([]);
 
   // ---- Start: To get initial filtered data (to table) ---------
   useEffect(() => {
@@ -299,24 +234,13 @@ export const SearchUI: React.FC<ResultViewProps> = ({
   }, [receiverOfItemArray]);
   // ---- End: To get initial filtered data (to table) ---------
 
-  // const handleSearch = () => {
-  //   const searchedResultsTwo = filteredData.filter((item) => {
-  //     return Object.values(item).some((value) => {
-  //       const includesSearchQuery = value
-  //         ? value.toString().toLowerCase().includes(searchQuery.toLowerCase())
-  //         : false;
-  //       return includesSearchQuery;
-  //     });
-  //   });
-  //   setFilteredData(searchedResultsTwo);
-  // };
-
   let result;
 
   switch (table) {
     case "table":
       result = (
         <Table
+          size="small"
           columns={columns}
           dataSource={filteredData}
           pagination={false}
@@ -327,10 +251,9 @@ export const SearchUI: React.FC<ResultViewProps> = ({
     case "json":
       result = (
         <MonacoEditor
-          height="650"
           language="json"
           theme="vs-dark"
-          value={JSON.stringify(filteredData, null, 2)}
+          value={JSON.stringify(filteredData[0], null, 2)}
           options={{
             selectOnLineNumbers: true,
             lineHeight: 22,
@@ -401,8 +324,9 @@ export const SearchUI: React.FC<ResultViewProps> = ({
                 }}
               />
               <Input
+                size="small"
                 defaultValue=""
-                style={{ width: "357px", height: "40px" }}
+                style={{ width: "38rem", height: "40px" }}
                 onChange={(e) => {
                   setFilterOne((state) => {
                     state.query = e.target.value;
@@ -415,6 +339,7 @@ export const SearchUI: React.FC<ResultViewProps> = ({
           <div className="each-field">
             <Space.Compact>
               <Select
+                size="small"
                 disabled={false}
                 defaultValue="Select"
                 options={secondSearchOptions}
@@ -429,7 +354,7 @@ export const SearchUI: React.FC<ResultViewProps> = ({
               <Input
                 disabled={false}
                 defaultValue=""
-                style={{ width: "357px", height: "40px" }}
+                style={{ width: "38rem", height: "40px" }}
                 onChange={(e) => {
                   setFilterTwo((state) => {
                     state.query = e.target.value;
@@ -449,7 +374,7 @@ export const SearchUI: React.FC<ResultViewProps> = ({
                     form={form}
                     name="control-hooks"
                     // onFinish={onFinish}
-                    style={{ maxWidth: 532, gap: "8px" }}
+                    style={{ maxWidth: 640, gap: "8px" }}
                   >
                     <Form.Item
                       name="address Line 1"
@@ -465,31 +390,37 @@ export const SearchUI: React.FC<ResultViewProps> = ({
                     >
                       <Input />
                     </Form.Item>
-                    <Form.Item
-                      name="city"
-                      label="City"
-                      rules={[{ required: true }]}
-                    >
-                      <Input />
-                    </Form.Item>
-                    <Form.Item
-                      name="state"
-                      label="State"
-                      rules={[{ required: true }]}
-                    >
-                      <Input />
-                    </Form.Item>
-                    <Form.Item
-                      name="zipcode"
-                      label="Zip code"
-                      rules={[{ required: true }]}
-                    >
-                      <Input />
+                    <Form.Item>
+                      <div className="address-line-state">
+                        <Form.Item
+                          name="city"
+                          label="City"
+                          rules={[{ required: true }]}
+                          style={{ marginLeft: "4px" }}
+                        >
+                          <Input />
+                        </Form.Item>
+                        <Form.Item
+                          name="state"
+                          label="State"
+                          rules={[{ required: true }]}
+                        >
+                          <Input />
+                        </Form.Item>
+                        <Form.Item
+                          name="zipcode"
+                          label="Zip code"
+                          rules={[{ required: true }]}
+                        >
+                          <Input />
+                        </Form.Item>
+                      </div>
                     </Form.Item>
                     <div className="form-btns-container">
                       <Button
                         style={{
                           marginRight: "16px",
+                          marginLeft: "12rem",
                           width: "82px",
                           height: "32px",
                         }}
@@ -509,40 +440,26 @@ export const SearchUI: React.FC<ResultViewProps> = ({
             )}
           </div>
         </div>
+        <div>
+          <Divider
+            orientation="right"
+            type="vertical"
+            style={{ height: "110px", margin: "0 6rem" }}
+          />
 
-        <Divider
-          orientation="right"
-          type="vertical"
-          style={{ height: "110px" }}
-        />
-
-        <Button
-          style={{ marginTop: "35px", width: "89px", height: "40px" }}
-          type="primary"
-          disabled={!isButtonEnabled}
-          onClick={onSearchClicked}
-        >
-          Search
-        </Button>
-
-        {/* <Select
-            className='select-box'
-            showSearch
-            mode='tags'
-            placeholder="Search by:"
-            optionFilterProp="children"
-            onChange={onChangeOne}
-            options={firstOptions}
-        />
-
-          <Search
-            disabled= {hasShipperUserId}
-            className='search-input'
-            placeholder="Search Address by street name, city, pincode"
-            onSearch={handleSearch}
-            style={{ height: '9px' }}
-            onChange={(e) => setSearchQuery(e.target.value)}
-        />   */}
+          <Button
+            style={{
+              marginTop: "35px",
+              width: "89px",
+              height: "40px",
+            }}
+            type="primary"
+            disabled={!isButtonEnabled}
+            onClick={onSearchClicked}
+          >
+            Search
+          </Button>
+        </div>
       </div>
 
       <div className="result-container">
@@ -581,31 +498,4 @@ export const SearchUI: React.FC<ResultViewProps> = ({
   );
 };
 
-{
-  /* <form action="">
-      <div>
-        <label>Address Line 1:</label>
-        <input placeholder='Enter address' required />
-      </div>
-      <div>
-        <label>Address Line 2:</label>
-        <input placeholder='Enter address' required  />
-      </div>
-      <div>
-        <label>City:</label>
-        <input placeholder='Enter city' required  />
-      </div>
-      <div>
-        <label>State:</label>
-        <input placeholder='Enter state' required  />
-      </div>
-      <div>
-        <label></label>
-        <input placeholder='Eg:577005' required  />
-      </div>
-      <div>
-        <button type="submit">Submit</button>
-        <button>Cancel</button>
-      </div>
-    </form> */
-}
+

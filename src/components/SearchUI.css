@@ -1,7 +1,14 @@
+.ant-select-selector{
+  border-radius: 0!important;
+}
+.ant-input{
+  border-radius: 0!important;
+}
+
 .inputs-container {
   display: flex;
   flex-direction: row;
-  justify-content: flex-start;
+  justify-content: center;
   padding: 20px 80px;
   gap: 16px;
 }
@@ -17,6 +24,7 @@
   width: 525px;
 }
 .result-container {
+  margin-top: 1.5rem;
   padding: 0px 80px;
 }
 .match-count {
@@ -133,8 +141,7 @@
   padding-left: 10px;
 }
 .form-container {
-  width: 532px;
-  height: 278px;
+  width: 48rem;
   padding: 6px 16px 23px 0;
   display: flex;
   flex-direction: column;
@@ -144,4 +151,17 @@
   flex-direction: row;
   justify-content: center;
   align-items: center;
+}
+
+.address-line-state{
+  display: flex;
+  justify-content: end;
+  gap: 12px;
+  padding-left: 8px;
+}
+.ant-form-item-row{
+  justify-content: end !important;
+  .ant-form-item-control-input-content {
+    width: 9.46rem;
+  }
 }
