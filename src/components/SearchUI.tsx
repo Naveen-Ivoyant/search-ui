@@ -517,7 +517,9 @@ export const SearchUI: React.FC<ResultViewProps> = () => {
                       <Button type="primary" htmlType="submit">
                         Submit
                       </Button>
-                      <Button>Cancel</Button>
+                      <Button onClick={() => setAddressModal(false)}>
+                        Cancel
+                      </Button>
                     </div>
                   </Form>
                 </div>
